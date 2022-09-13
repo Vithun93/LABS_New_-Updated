@@ -1,0 +1,102 @@
+-- Query to find table names:
+
+SELECT name 
+  FROM sqlite_master
+ where type = 'table'
+ 
+ -- Query to find table structure: 
+ SELECT sql 
+  FROM sqlite_master
+ where name = 'crime_scene_report'
+ 
+ -- 1. Query to find the report which gave information about 2 witnesses
+ SELECT * FROM crime_scene_report
+where date = 20180115 and type = 'murder' and city = 'SQL City'  
+
+-- Query to find 1st witness 
+SELECT * FROM person      
+     where address_street_name = 'Northwestern Dr'
+	 order by address_number desc
+	 limit 1
+	 
+	 Result:
+id	name	license_id	address_number	address_street_name	ssn
+14887	Morty Schapiro	118009	4919	Northwestern Dr	111564949
+
+-- Query to find 2nd witness
+SELECT * FROM person      
+     where address_street_name = 'Franklin Ave'
+	 and name like 'Annabel%'
+	 
+	 Result:
+id	name	license_id	address_number	address_street_name	ssn
+16371	Annabel Miller	490173	103	Franklin Ave	318771143
+
+-- Query iterviews of both witnesses:
+SELECT * FROM interview     
+where person_id  in  (14887, 16371)
+
+Results:
+person_id	transcript
+14887	I heard a gunshot and then saw a man run out. He had a "Get Fit N week on Jow Gym" bag. The membership number on the bag started with "48Z". Only gold members have those bags. The man got into a car with a plate that included "H42W".
+16371	I saw the murder happen, and I recognized the killer from my gym when I was working out lastanuary the 9th.
+
+-- Query to get susspect information from gym
+SELECT * FROM get_fit_now_check_in
+where membership_id like '48Z%' and check_in_date = 20180109
+
+Result:
+membership_id	check_in_date	check_in_time	check_out_time
+48Z7A	20180109	1600	1730
+48Z55	20180109	1530	1700
+
+-- Quey to add information about gym members, person ans dirving license:
+
+SELECT * FROM get_fit_now_member
+where id in ('48Z7A', '48Z55')
+
+
+ Result: 
+ id	person_id	name	membership_start_date	membership_status
+48Z55	67318	Jeremy Bowers	20160101	gold
+48Z7A	28819	Joe Germuska	20160305	gold
+
+SELECT * FROM get_fit_now_member
+LEFT JOIN person 
+ON get_fit_now_member.person_id = person.id
+LEFT JOIN drivers_license
+ON person.license_id = drivers_license.id
+where get_fit_now_member.id in ('48Z7A', '48Z55')
+
+-- Query to get interview from gym members 
+SELECT * FROM interview     
+where person_id  in  (67318, 28819)
+              
+person_id	transcript
+67318	I was hired by a woman with a lot of money. I don't know her name but I know she's around 5'5" (65") or 5'7" (67"). She has red hair and she drives a Tesla Model S. I know that she attended the SQL Symphony Concert 3 times in December 2017.
+
+-- Query to get all of the information about the woman from the description
+SELECT * 
+FROM person 
+LEFT JOIN drivers_license
+ON person.license_id = drivers_license.id
+LEFT JOIN get_fit_now_member
+ON get_fit_now_member.person_id = person.id
+LEFT JOIN get_fit_now_check_in
+ON get_fit_now_check_in.membership_id = get_fit_now_member.id
+where drivers_license.gender = 'female' and car_make = 'Tesla' and car_model = 'Model S'
+and height between 65 and 67
+              
+Result:
+id	name	license_id	address_number	address_street_name	ssn	id	age	height	eye_color	hair_color	gender	plate_number	car_make	car_model	id	person_id	name	membership_start_date	membership_status	membership_id	check_in_date	check_in_time	check_out_time
+78881	Red Korb	918773	107	Camerata Dr	961388910	918773	48	65	black	red	female	917UU3	Tesla	Model S	null	null	null	null	null	null	null	null	null
+90700	Regina George	291182	332	Maple Ave	337169072	291182	65	66	blue	red	female	08CM64	Tesla	Model S	null	null	null	null	null	null	null	null	null
+99716	Miranda Priestly	202298	1883	Golden Ave	987756388	202298	68	66	green	red	female	500123	Tesla	Model S	null	null	null	null	null	null	null	null	null
+
+-- Query to check who went to symphony 3 times in december
+SELECT * 
+FROM facebook_event_checkin
+where date like '201712%' and event_name like '%SQL%'
+and person_id in (78881, 90700, 99716)
+
+The person who organized the murder is Miranda Priestly
